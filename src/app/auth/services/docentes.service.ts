@@ -1,39 +1,59 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import {
-  EstadoAsistencia, Entrega, FilaAsistencia, FilaEntrega, Matricula, Oferta, SesionDocente, TareaDocente,
-} from '../../core/models';
+import { AsignacionApi, SesionApi, TareaApi } from '../../core/api-models';
+import { ofertaDesdeApi } from '../../core/mappers';
+import { Oferta, Sesion, Tarea } from '../../core/models';
+import { AcademicoService } from './academico.service';
+import { AuthService } from './auth';
 
 @Injectable({ providedIn: 'root' })
 export class DocentesService {
   private http = inject(HttpClient);
-  private base = `${environment.apiUrl}/docente`;
+  private auth = inject(AuthService);
+  private academico = inject(AcademicoService);
+  private base = environment.academicoUrl;
 
-  /** Cursos (curso-periodo) asignados al docente autenticado. */
-  getCursosDocente(): Observable<Oferta[]> { return this.http.get<Oferta[]>(`${this.base}/cursos`); }
-  getCurso(ofertaId: number): Observable<Oferta> { return this.http.get<Oferta>(`${this.base}/cursos/${ofertaId}`); }
-
-  alumnos(ofertaId: number): Observable<Matricula[]> { return this.http.get<Matricula[]>(`${this.base}/cursos/${ofertaId}/alumnos`); }
-  calificarAlumno(matriculaId: number, nota: number, observacion: string): Observable<Matricula> {
-    return this.http.put<Matricula>(`${this.base}/matriculas/${matriculaId}/calificacion`, { nota, observacion });
+  /** Cursos (asignaciones) del docente autenticado, con sus conteos de sesiones y tareas. */
+  getCursosDocente(): Observable<Oferta[]> {
+    return this.http.get<AsignacionApi[]>(`${this.base}/asignaciones/mis-asignaciones`).pipe(
+      switchMap((asignaciones) => asignaciones.length
+        ? forkJoin(asignaciones.map((a) => forkJoin({
+            s: this.http.get<SesionApi[]>(`${this.base}/sesiones/asignacion/${a.idAsignacion}`),
+            t: this.http.get<TareaApi[]>(`${this.base}/tareas/asignacion/${a.idAsignacion}`),
+          }).pipe(map(({ s, t }) => ofertaDesdeApi(a, {
+            docenteNombre: this.auth.nombreMostrar(), totalSesiones: s.length, totalTareas: t.length,
+          })))))
+        : of([] as Oferta[]))
+    );
+  }
+  /** GET /asignaciones/{id} es solo de administrador, por eso se busca entre las del docente. */
+  getCurso(ofertaId: number): Observable<Oferta> {
+    return this.getCursosDocente().pipe(
+      map((l) => {
+        const o = l.find((x) => x.id === ofertaId);
+        if (!o) throw new HttpErrorResponse({ status: 404, error: { message: 'Este curso no está asignado a tu usuario.' } });
+        return o;
+      })
+    );
   }
 
-  sesiones(ofertaId: number): Observable<SesionDocente[]> { return this.http.get<SesionDocente[]>(`${this.base}/cursos/${ofertaId}/sesiones`); }
-  asistencia(sesionId: number): Observable<FilaAsistencia[]> { return this.http.get<FilaAsistencia[]>(`${this.base}/sesiones/${sesionId}/asistencia`); }
-  guardarAsistencia(sesionId: number, filas: { matriculaId: number; estado: EstadoAsistencia }[]): Observable<void> {
-    return this.http.put<void>(`${this.base}/sesiones/${sesionId}/asistencia`, filas);
+  sesiones(ofertaId: number): Observable<Sesion[]> { return this.academico.sesiones(ofertaId); }
+  crearSesion(ofertaId: number, s: { titulo: string; fecha: string; descripcion: string }): Observable<Sesion> {
+    return this.academico.crearSesion({ ofertaId, ...s });
   }
+  actualizarSesion(id: number, s: { titulo: string; fecha: string; descripcion: string; numero?: number }): Observable<Sesion> {
+    return this.academico.actualizarSesion(id, s);
+  }
+  eliminarSesion(id: number): Observable<void> { return this.academico.eliminarSesion(id); }
 
-  tareas(ofertaId: number): Observable<TareaDocente[]> { return this.http.get<TareaDocente[]>(`${this.base}/cursos/${ofertaId}/tareas`); }
-  tarea(tareaId: number): Observable<TareaDocente> { return this.http.get<TareaDocente>(`${this.base}/tareas/${tareaId}`); }
-  crearTarea(ofertaId: number, t: { titulo: string; descripcion: string; fechaLimite: string; puntajeMax: number }): Observable<TareaDocente> {
-    return this.http.post<TareaDocente>(`${this.base}/cursos/${ofertaId}/tareas`, t);
+  tareas(ofertaId: number): Observable<Tarea[]> { return this.academico.tareas(ofertaId); }
+  crearTarea(ofertaId: number, t: { titulo: string; descripcion: string; fechaLimite: string }): Observable<Tarea> {
+    return this.academico.crearTarea(ofertaId, t);
   }
-  entregas(tareaId: number): Observable<FilaEntrega[]> { return this.http.get<FilaEntrega[]>(`${this.base}/tareas/${tareaId}/entregas`); }
-  /** El docente solo califica: no existe endpoint para modificar el contenido de una entrega. */
-  calificarEntrega(entregaId: number, nota: number, retroalimentacion: string): Observable<Entrega> {
-    return this.http.put<Entrega>(`${this.base}/entregas/${entregaId}/calificacion`, { nota, retroalimentacion });
+  actualizarTarea(id: number, t: { titulo: string; descripcion: string; fechaLimite: string }): Observable<Tarea> {
+    return this.academico.actualizarTarea(id, t);
   }
+  eliminarTarea(id: number): Observable<void> { return this.academico.eliminarTarea(id); }
 }

@@ -1,5 +1,4 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { EstadoTarea } from './models';
 
 /** Extrae un mensaje legible de un error HTTP (formato Spring: { message }). */
 export function errMsg(err: unknown, porDefecto = 'Ocurrió un error inesperado.'): string {
@@ -18,13 +17,6 @@ export function nombreCompleto(u: { nombres: string; apellidos: string }): strin
   return `${u.nombres} ${u.apellidos}`.trim();
 }
 
-export function formatoBytes(n: number | null | undefined): string {
-  if (n == null) return '';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
-
 /** Fecha local de hoy en formato yyyy-MM-dd. */
 export function hoyISO(): string {
   const d = new Date();
@@ -33,27 +25,9 @@ export function hoyISO(): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-/** Texto del estado de una tarea. */
-export function etiquetaEstado(e: EstadoTarea): string {
-  switch (e) {
-    case 'PENDIENTE': return 'Pendiente';
-    case 'ENTREGADA': return 'Entregada';
-    case 'CALIFICADA': return 'Calificada';
-    default: return 'Vencida';
-  }
-}
-
-/** Clase CSS (badge) del estado de una tarea. */
-export function claseEstado(e: EstadoTarea): string {
-  switch (e) {
-    case 'PENDIENTE': return 'b-warn';
-    case 'ENTREGADA': return 'b-info';
-    case 'CALIFICADA': return 'b-ok';
-    default: return 'b-err';
-  }
-}
-
-/** Clase CSS para resaltar notas desaprobatorias (escala 0-20, aprobatoria 11). */
-export function notaClase(n: number | null | undefined): string {
-  return n != null && n < 11 ? 'nota baja' : 'nota';
+/** Fecha y hora local actual en formato yyyy-MM-ddTHH:mm:ss (sin zona, como espera LocalDateTime). */
+export function ahoraISO(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }

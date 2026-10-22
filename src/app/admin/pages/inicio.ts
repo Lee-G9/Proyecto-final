@@ -13,7 +13,7 @@ import { errMsg, hoyISO } from '../../core/util';
     <div class="page-head">
       <div>
         <h1>Panel de gestión</h1>
-        <p>Administración de usuarios, periodos, cursos y matrículas de la plataforma.</p>
+        <p>Administración de usuarios, periodos, cursos, sesiones y tareas de la plataforma.</p>
       </div>
     </div>
 
@@ -33,15 +33,15 @@ import { errMsg, hoyISO } from '../../core/util';
       } @else {
         <div class="tabla-wrap">
           <table class="tabla">
-            <thead><tr><th>Código</th><th>Curso</th><th>Docente</th><th class="num">Alumnos</th><th class="num">Sesiones</th></tr></thead>
+            <thead><tr><th>Código</th><th>Curso</th><th>Docente</th><th class="num">Sesiones</th><th class="num">Tareas</th></tr></thead>
             <tbody>
               @for (o of ofertas(); track o.id) {
                 <tr>
                   <td>{{ o.cursoCodigo }}</td>
                   <td class="strong">{{ o.cursoNombre }}</td>
                   <td>@if (o.docenteNombre) { {{ o.docenteNombre }} } @else { <span class="badge b-warn">Sin docente</span> }</td>
-                  <td class="num">{{ o.totalAlumnos }}</td>
                   <td class="num">{{ o.totalSesiones }}</td>
+                  <td class="num">{{ o.totalTareas }}</td>
                 </tr>
               }
             </tbody>
@@ -58,7 +58,7 @@ import { errMsg, hoyISO } from '../../core/util';
         <li><a routerLink="../cursos">Crear los cursos</a> del catálogo</li>
         <li><a routerLink="../oferta">Asignar cursos al periodo</a> y elegir el docente de cada uno</li>
         <li><a routerLink="../sesiones">Crear las sesiones</a> de cada curso</li>
-        <li><a routerLink="../matriculas">Matricular alumnos</a> en cada curso del periodo</li>
+        <li><a routerLink="../tareas">Publicar tareas</a> (también pueden hacerlo los docentes)</li>
       </ol>
     </div>
   `,

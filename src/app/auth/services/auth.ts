@@ -2,8 +2,34 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { LoginRequest } from '../models/login-request';
-import { JwtResponse } from '../models/jwt-response';
+import { JwtResponse, LoginResponse } from '../models/jwt-response';
 import { environment } from '../../../environments/environment';
+
+/** Lee el payload de un JWT (base64url → JSON). Devuelve null si el token no es válido. */
+export function decodificarJwt(token: string): Record<string, any> | null {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
+}
+
+/** Arma la sesión con los claims que firma servicio-usuarios: sub, idUsuario y roles[]. */
+export function sesionDesdeToken(token: string): JwtResponse {
+  const claims = decodificarJwt(token) ?? {};
+  const roles: string[] = Array.isArray(claims['roles']) ? claims['roles'] : [];
+  const rol = roles.map((r) => normalizarRol(r)).find((r): r is JwtResponse['rol'] => r !== null);
+  return {
+    token,
+    type: 'Bearer',
+    id: claims['idUsuario'],
+    username: claims['sub'] ?? '',
+    // Si el token no trae un rol conocido, el login lo rechaza (ver LoginComponent).
+    rol: rol ?? (roles[0] as JwtResponse['rol']),
+  };
+}
 
 /** Normaliza el rol que envía el backend (ROLE_ADMIN, administrador, etc.). */
 export function normalizarRol(rol: string | null | undefined): JwtResponse['rol'] | null {
@@ -27,15 +53,17 @@ export function rutaPorRol(rol: string | null | undefined): string {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = `${environment.apiUrl}/auth`;
+  private apiUrl = `${environment.usuariosUrl}/auth`;
 
   currentUserSignal = signal<JwtResponse | null>(this.getUserFromStorage());
 
   constructor(private http: HttpClient) {}
 
+  /** El backend recibe {nombreUsuario, contrasena} y responde solo {token}; el resto sale del JWT. */
   login(credentials: LoginRequest): Observable<JwtResponse> {
-    return this.http.post<JwtResponse>(`${this.apiUrl}/login`, credentials).pipe(
-      map((response) => ({ ...response, rol: normalizarRol(response.rol) ?? response.rol })),
+    const body = { nombreUsuario: credentials.username, contrasena: credentials.password };
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, body).pipe(
+      map(({ token }) => sesionDesdeToken(token)),
       tap((response) => {
         if (response && response.token) {
           localStorage.setItem('auth_token', response.token);

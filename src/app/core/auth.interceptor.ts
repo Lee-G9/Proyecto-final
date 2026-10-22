@@ -5,10 +5,12 @@ import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../auth/services/auth';
 import { environment } from '../../environments/environment';
 
-/** Agrega el JWT a cada petición al backend. */
+const esApi = (url: string) => [environment.usuariosUrl, environment.academicoUrl].some((base) => url.startsWith(base));
+
+/** Agrega el JWT a cada petición a los microservicios (menos al login). */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = inject(AuthService).getToken();
-  if (token && req.url.startsWith(environment.apiUrl) && !req.url.endsWith('/auth/login')) {
+  if (token && esApi(req.url) && !req.url.endsWith('/auth/login')) {
     req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
   }
   return next(req);

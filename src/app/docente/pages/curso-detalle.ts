@@ -4,13 +4,16 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DocentesService } from '../../auth/services/docentes.service';
-import { EstadoAsistencia, FilaAsistencia, Matricula, Oferta, SesionDocente, TareaDocente } from '../../core/models';
-import { errMsg, notaClase } from '../../core/util';
+import { Oferta, Sesion, Tarea } from '../../core/models';
+import { errMsg } from '../../core/util';
 import { Flash } from '../../shared/flash';
 
-interface FilaNota { m: Matricula; nota: number | null; obs: string; guardando: boolean; }
-type Pestana = 'alumnos' | 'asistencia' | 'tareas';
+type Pestana = 'sesiones' | 'tareas';
 
+const sesionVacia = () => ({ titulo: '', fecha: '', descripcion: '', numero: 1 });
+const tareaVacia = () => ({ titulo: '', descripcion: '', fechaLimite: '' });
+
+/** Detalle de un curso del docente: gestiona las sesiones y tareas de su asignación. */
 @Component({
   selector: 'app-docente-curso-detalle',
   standalone: true,
@@ -21,93 +24,62 @@ type Pestana = 'alumnos' | 'asistencia' | 'tareas';
     @if (cargando()) { <div class="loading">Cargando curso…</div> }
     @else if (curso(); as c) {
       <div class="page-head">
-        <div><h1>{{ c.cursoNombre }}</h1><p>{{ c.cursoCodigo }} · Periodo {{ c.periodoNombre }} · {{ filas().length }} alumnos matriculados</p></div>
+        <div><h1>{{ c.cursoNombre }}</h1><p>{{ c.cursoCodigo }} · Periodo {{ c.periodoNombre }}</p></div>
       </div>
 
       @if (flash.m(); as m) { <div class="alert" [class.alert-ok]="m.tipo === 'ok'" [class.alert-err]="m.tipo === 'err'" role="status">{{ m.texto }}</div> }
 
       <div class="tabs" role="tablist">
-        <button type="button" role="tab" class="tab" [class.activa]="pestana() === 'alumnos'" (click)="pestana.set('alumnos')">Alumnos y notas</button>
-        <button type="button" role="tab" class="tab" [class.activa]="pestana() === 'asistencia'" (click)="pestana.set('asistencia')">Asistencia</button>
+        <button type="button" role="tab" class="tab" [class.activa]="pestana() === 'sesiones'" (click)="pestana.set('sesiones')">Sesiones</button>
         <button type="button" role="tab" class="tab" [class.activa]="pestana() === 'tareas'" (click)="pestana.set('tareas')">Tareas</button>
       </div>
 
-      <!-- ===================== ALUMNOS Y NOTAS ===================== -->
-      @if (pestana() === 'alumnos') {
-        @if (filas().length === 0) { <div class="empty">Aún no hay alumnos matriculados en este curso.</div> }
-        @else {
-          <div class="tabla-wrap">
-            <table class="tabla">
-              <thead><tr><th>Alumno</th><th class="num">Prom. tareas</th><th>Nota final (0–20)</th><th>Observación</th><th></th></tr></thead>
-              <tbody>
-                @for (f of filas(); track f.m.id) {
-                  <tr>
-                    <td class="strong">{{ f.m.alumnoNombre }}</td>
-                    <td class="num">{{ f.m.promedioTareas ?? '—' }}</td>
-                    <td style="width: 140px"><input class="input compacto" type="number" min="0" max="20" step="0.5" [attr.aria-label]="'Nota final de ' + f.m.alumnoNombre" [(ngModel)]="f.nota" /></td>
-                    <td style="min-width: 220px"><input class="input compacto" [attr.aria-label]="'Observación para ' + f.m.alumnoNombre" [(ngModel)]="f.obs" placeholder="Opcional" /></td>
-                    <td class="acciones"><button type="button" class="btn btn-primary btn-sm" [disabled]="f.guardando" (click)="guardarNota(f)">{{ f.guardando ? 'Guardando…' : 'Guardar' }}</button></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      }
+      <!-- ===================== SESIONES ===================== -->
+      @if (pestana() === 'sesiones') {
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 16px">
+          <button type="button" class="btn btn-primary" (click)="alternarFormSesion()">{{ mostrarFormSesion() ? 'Cerrar formulario' : '+ Crear sesión' }}</button>
+        </div>
 
-      <!-- ===================== ASISTENCIA ===================== -->
-      @if (pestana() === 'asistencia') {
-        @if (sesiones().length === 0) { <div class="empty">El administrador aún no creó sesiones para este curso.</div> }
+        @if (mostrarFormSesion()) {
+          <form class="card form-card" #fs="ngForm" (ngSubmit)="guardarSesion(fs)" novalidate>
+            <strong>{{ editandoSesionId() !== null ? 'Editar sesión' : 'Nueva sesión' }}</strong>
+            <div class="form-grid">
+              @if (editandoSesionId() !== null) {
+                <div class="field"><label for="sn">N.º de sesión</label>
+                  <input class="input" id="sn" name="numero" type="number" min="1" [(ngModel)]="formSesion.numero" required /></div>
+              }
+              <div class="field"><label for="st">Título</label>
+                <input class="input" id="st" name="titulo" [(ngModel)]="formSesion.titulo" required autocomplete="off" /></div>
+              <div class="field"><label for="sf">Fecha</label>
+                <input class="input" id="sf" name="fecha" type="date" [(ngModel)]="formSesion.fecha" required /></div>
+              <div class="field full"><label for="sd">Descripción (opcional)</label>
+                <textarea class="textarea" id="sd" name="desc" [(ngModel)]="formSesion.descripcion"></textarea></div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost" (click)="cancelarSesion(fs)">Cancelar</button>
+              <button type="submit" class="btn btn-primary" [disabled]="guardandoSesion()">
+                {{ guardandoSesion() ? 'Guardando…' : (editandoSesionId() !== null ? 'Guardar cambios' : 'Crear sesión') }}</button>
+            </div>
+          </form>
+        }
+
+        @if (sesiones().length === 0) { <div class="empty">Todavía no creaste sesiones para este curso.</div> }
         @else {
           <div class="tabla-wrap">
             <table class="tabla">
-              <thead><tr><th class="num">N.º</th><th>Sesión</th><th>Fecha</th><th>Asistencia</th><th></th></tr></thead>
+              <thead><tr><th class="num">N.º</th><th>Título</th><th>Fecha</th><th>Descripción</th><th class="acciones">Acciones</th></tr></thead>
               <tbody>
                 @for (s of sesiones(); track s.id) {
                   <tr>
-                    <td class="num">{{ s.numero }}</td><td class="strong">{{ s.titulo }}</td><td>{{ s.fecha | date: 'dd/MM/yyyy' }}</td>
-                    <td>@if (s.asistenciaRegistrada) { <span class="badge b-ok">Registrada · {{ s.presentes }}/{{ s.registrados }} asistieron</span> } @else { <span class="badge b-warn">Pendiente</span> }</td>
-                    <td class="acciones"><button type="button" class="btn btn-sm" [class.btn-primary]="!s.asistenciaRegistrada" [class.btn-ghost]="s.asistenciaRegistrada" (click)="abrirAsistencia(s)">
-                      {{ s.asistenciaRegistrada ? 'Editar' : 'Tomar asistencia' }}</button></td>
+                    <td class="num">{{ s.numero }}</td><td class="strong">{{ s.titulo }}</td><td>{{ s.fecha | date: 'dd/MM/yyyy' }}</td><td class="muted">{{ s.descripcion || '—' }}</td>
+                    <td class="acciones">
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="editarSesion(s)">Editar</button>
+                      <button type="button" class="btn btn-danger btn-sm" (click)="eliminarSesion(s)">Eliminar</button>
+                    </td>
                   </tr>
                 }
               </tbody>
             </table>
-          </div>
-        }
-
-        @if (sesionSel(); as s) {
-          <div class="card" style="margin-top: 20px">
-            <div class="card-top">
-              <h3>Sesión {{ s.numero }}: {{ s.titulo }}</h3>
-              <button type="button" class="btn btn-ghost btn-sm" (click)="sesionSel.set(null)">Cerrar</button>
-            </div>
-            @if (asistencia().length === 0) { <p class="muted">No hay alumnos matriculados.</p> }
-            @else {
-              <div class="tabla-wrap" style="margin-top: 12px; border: none">
-                <table class="tabla">
-                  <thead><tr><th>Alumno</th><th>Estado</th></tr></thead>
-                  <tbody>
-                    @for (a of asistencia(); track a.matriculaId) {
-                      <tr>
-                        <td class="strong">{{ a.alumnoNombre }}</td>
-                        <td>
-                          <div class="segmentos" role="group" [attr.aria-label]="'Asistencia de ' + a.alumnoNombre">
-                            @for (e of estados; track e.v) {
-                              <button type="button" class="segmento" [class]="'segmento' + (a.estado === e.v ? ' sel-' + e.v : '')" [attr.aria-pressed]="a.estado === e.v" (click)="a.estado = e.v">{{ e.l }}</button>
-                            }
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              <div class="form-actions" style="justify-content: space-between">
-                <button type="button" class="btn btn-ghost" (click)="marcarTodos()">Marcar todos presentes</button>
-                <button type="button" class="btn btn-primary" [disabled]="guardandoAsistencia()" (click)="guardarAsistencia()">{{ guardandoAsistencia() ? 'Guardando…' : 'Guardar asistencia' }}</button>
-              </div>
-            }
           </div>
         }
       }
@@ -115,24 +87,24 @@ type Pestana = 'alumnos' | 'asistencia' | 'tareas';
       <!-- ===================== TAREAS ===================== -->
       @if (pestana() === 'tareas') {
         <div style="display: flex; justify-content: flex-end; margin-bottom: 16px">
-          <button type="button" class="btn btn-primary" (click)="mostrarFormTarea.set(!mostrarFormTarea())">{{ mostrarFormTarea() ? 'Cerrar formulario' : '+ Crear tarea' }}</button>
+          <button type="button" class="btn btn-primary" (click)="alternarFormTarea()">{{ mostrarFormTarea() ? 'Cerrar formulario' : '+ Crear tarea' }}</button>
         </div>
 
         @if (mostrarFormTarea()) {
-          <form class="card form-card" #f="ngForm" (ngSubmit)="crearTarea(f)" novalidate>
+          <form class="card form-card" #f="ngForm" (ngSubmit)="guardarTarea(f)" novalidate>
+            <strong>{{ editandoTareaId() !== null ? 'Editar tarea' : 'Nueva tarea' }}</strong>
             <div class="form-grid">
               <div class="field"><label for="tt">Título</label>
                 <input class="input" id="tt" name="titulo" [(ngModel)]="formTarea.titulo" required autocomplete="off" /></div>
               <div class="field"><label for="tf">Fecha y hora límite</label>
                 <input class="input" id="tf" name="fecha" type="datetime-local" [(ngModel)]="formTarea.fechaLimite" required /></div>
-              <div class="field"><label for="tp">Puntaje máximo</label>
-                <input class="input" id="tp" name="puntaje" type="number" min="1" max="100" [(ngModel)]="formTarea.puntajeMax" required /></div>
               <div class="field full"><label for="td">Consigna / instrucciones</label>
                 <textarea class="textarea" id="td" name="desc" [(ngModel)]="formTarea.descripcion"></textarea></div>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-ghost" (click)="cancelarTarea(f)">Cancelar</button>
-              <button type="submit" class="btn btn-primary" [disabled]="guardandoTarea()">{{ guardandoTarea() ? 'Guardando…' : 'Crear tarea' }}</button>
+              <button type="submit" class="btn btn-primary" [disabled]="guardandoTarea()">
+                {{ guardandoTarea() ? 'Guardando…' : (editandoTareaId() !== null ? 'Guardar cambios' : 'Crear tarea') }}</button>
             </div>
           </form>
         }
@@ -141,13 +113,16 @@ type Pestana = 'alumnos' | 'asistencia' | 'tareas';
         @else {
           <div class="tabla-wrap">
             <table class="tabla">
-              <thead><tr><th>Tarea</th><th>Fecha límite</th><th class="num">Puntaje</th><th class="num">Entregas</th><th class="num">Calificadas</th><th></th></tr></thead>
+              <thead><tr><th>Tarea</th><th>Fecha límite</th><th>Consigna</th><th class="acciones">Acciones</th></tr></thead>
               <tbody>
                 @for (t of tareas(); track t.id) {
                   <tr>
                     <td class="strong">{{ t.titulo }}</td><td>{{ t.fechaLimite | date: 'dd/MM/yyyy HH:mm' }}</td>
-                    <td class="num">{{ t.puntajeMax }}</td><td class="num">{{ t.totalEntregas }}/{{ t.totalAlumnos }}</td><td class="num">{{ t.totalCalificadas }}</td>
-                    <td class="acciones"><a class="btn btn-dark btn-sm" [routerLink]="['tareas', t.id]">Revisar entregas</a></td>
+                    <td class="muted">{{ t.descripcion || '—' }}</td>
+                    <td class="acciones">
+                      <button type="button" class="btn btn-ghost btn-sm" (click)="editarTarea(t)">Editar</button>
+                      <button type="button" class="btn btn-danger btn-sm" (click)="eliminarTarea(t)">Eliminar</button>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -165,31 +140,27 @@ export class DocenteCursoDetalle implements OnInit {
   private ofertaId = computed(() => Number(this.id()));
 
   curso = signal<Oferta | null>(null);
-  filas = signal<FilaNota[]>([]);
-  sesiones = signal<SesionDocente[]>([]);
-  tareas = signal<TareaDocente[]>([]);
+  sesiones = signal<Sesion[]>([]);
+  tareas = signal<Tarea[]>([]);
   cargando = signal(true);
-  pestana = signal<Pestana>('alumnos');
+  pestana = signal<Pestana>('sesiones');
   flash = new Flash();
 
-  sesionSel = signal<SesionDocente | null>(null);
-  asistencia = signal<FilaAsistencia[]>([]);
-  guardandoAsistencia = signal(false);
-  estados: { v: EstadoAsistencia; l: string }[] = [
-    { v: 'PRESENTE', l: 'Presente' }, { v: 'TARDANZA', l: 'Tardanza' }, { v: 'FALTA', l: 'Falta' }, { v: 'JUSTIFICADO', l: 'Justificado' },
-  ];
+  mostrarFormSesion = signal(false);
+  guardandoSesion = signal(false);
+  editandoSesionId = signal<number | null>(null);
+  formSesion = sesionVacia();
 
   mostrarFormTarea = signal(false);
   guardandoTarea = signal(false);
-  formTarea = { titulo: '', descripcion: '', fechaLimite: '', puntajeMax: 20 };
-  notaClase = notaClase;
+  editandoTareaId = signal<number | null>(null);
+  formTarea = tareaVacia();
 
   ngOnInit() {
     const id = this.ofertaId();
-    forkJoin({ c: this.api.getCurso(id), a: this.api.alumnos(id), s: this.api.sesiones(id), t: this.api.tareas(id) }).subscribe({
+    forkJoin({ c: this.api.getCurso(id), s: this.api.sesiones(id), t: this.api.tareas(id) }).subscribe({
       next: (r) => {
         this.curso.set(r.c);
-        this.setAlumnos(r.a);
         this.sesiones.set(r.s);
         this.tareas.set(r.t);
         this.cargando.set(false);
@@ -198,67 +169,118 @@ export class DocenteCursoDetalle implements OnInit {
     });
   }
 
-  private setAlumnos(a: Matricula[]) {
-    this.filas.set(a.map((m) => ({ m, nota: m.notaFinal, obs: m.observacion, guardando: false })));
+  /* ---- sesiones ---- */
+  private recargarSesiones() { this.api.sesiones(this.ofertaId()).subscribe((l) => this.sesiones.set(l)); }
+
+  alternarFormSesion() {
+    if (this.mostrarFormSesion()) { this.cerrarFormSesion(); return; }
+    this.editandoSesionId.set(null);
+    this.formSesion = sesionVacia();
+    this.mostrarFormSesion.set(true);
   }
 
-  /* ---- notas ---- */
-  guardarNota(f: FilaNota) {
-    if (f.nota == null || isNaN(Number(f.nota)) || f.nota < 0 || f.nota > 20) { this.flash.err('La nota debe estar entre 0 y 20.'); return; }
-    f.guardando = true;
-    this.api.calificarAlumno(f.m.id, Number(f.nota), f.obs).subscribe({
-      next: (m) => { f.guardando = false; f.m = m; f.nota = m.notaFinal; this.flash.ok(`Nota de ${m.alumnoNombre} guardada (${m.notaFinal}).`); },
-      error: (e) => { f.guardando = false; this.flash.err(errMsg(e, 'No se pudo guardar la nota.')); },
-    });
+  editarSesion(s: Sesion) {
+    this.editandoSesionId.set(s.id);
+    this.formSesion = { titulo: s.titulo, fecha: s.fecha, descripcion: s.descripcion, numero: s.numero };
+    this.mostrarFormSesion.set(true);
   }
 
-  /* ---- asistencia ---- */
-  abrirAsistencia(s: SesionDocente) {
-    this.api.asistencia(s.id).subscribe({
-      next: (a) => { this.asistencia.set(a); this.sesionSel.set(s); },
-      error: (e) => this.flash.err(errMsg(e, 'No se pudo cargar la asistencia.')),
-    });
-  }
-
-  marcarTodos() {
-    this.asistencia.update((l) => l.map((a) => ({ ...a, estado: 'PRESENTE' as EstadoAsistencia })));
-  }
-
-  guardarAsistencia() {
-    const s = this.sesionSel();
-    if (!s) return;
-    const sinMarcar = this.asistencia().filter((a) => a.estado == null);
-    if (sinMarcar.length) { this.flash.err(`Falta marcar a: ${sinMarcar.map((a) => a.alumnoNombre).join(', ')}.`); return; }
-    this.guardandoAsistencia.set(true);
-    this.api.guardarAsistencia(s.id, this.asistencia().map((a) => ({ matriculaId: a.matriculaId, estado: a.estado as EstadoAsistencia }))).subscribe({
-      next: () => {
-        this.guardandoAsistencia.set(false);
-        this.flash.ok(`Asistencia de la sesión ${s.numero} guardada.`);
-        this.sesionSel.set(null);
-        this.api.sesiones(this.ofertaId()).subscribe((l) => this.sesiones.set(l));
+  guardarSesion(f: NgForm) {
+    if (f.invalid) { f.control.markAllAsTouched(); this.flash.err('Completa el título y la fecha.'); return; }
+    const id = this.editandoSesionId();
+    const { numero, ...datos } = this.formSesion;
+    if (id !== null && this.sesiones().some((s) => s.id !== id && s.numero === numero)) {
+      this.flash.err(`Ya hay otra sesión con el número ${numero}.`);
+      return;
+    }
+    this.guardandoSesion.set(true);
+    const req = id !== null ? this.api.actualizarSesion(id, { ...datos, numero }) : this.api.crearSesion(this.ofertaId(), datos);
+    req.subscribe({
+      next: (s) => {
+        this.guardandoSesion.set(false);
+        this.flash.ok(id !== null ? `Sesión ${s.numero} actualizada.` : `Sesión ${s.numero} creada.`);
+        this.cancelarSesion(f);
+        this.recargarSesiones();
       },
-      error: (e) => { this.guardandoAsistencia.set(false); this.flash.err(errMsg(e, 'No se pudo guardar la asistencia.')); },
+      error: (e) => { this.guardandoSesion.set(false); this.flash.err(errMsg(e, 'No se pudo guardar la sesión.')); },
     });
+  }
+
+  eliminarSesion(s: Sesion) {
+    if (!confirm(`¿Eliminar la sesión ${s.numero}: ${s.titulo}? Esta acción no se puede deshacer.`)) return;
+    this.api.eliminarSesion(s.id).subscribe({
+      next: () => {
+        this.flash.ok(`Sesión ${s.numero} eliminada.`);
+        if (this.editandoSesionId() === s.id) this.cerrarFormSesion();
+        this.recargarSesiones();
+      },
+      error: (e) => this.flash.err(errMsg(e, 'No se pudo eliminar la sesión.')),
+    });
+  }
+
+  cancelarSesion(f: NgForm) {
+    f.resetForm();
+    this.cerrarFormSesion();
+  }
+
+  private cerrarFormSesion() {
+    this.formSesion = sesionVacia();
+    this.editandoSesionId.set(null);
+    this.mostrarFormSesion.set(false);
   }
 
   /* ---- tareas ---- */
-  crearTarea(f: NgForm) {
-    if (f.invalid) { f.control.markAllAsTouched(); this.flash.err('Completa el título, la fecha límite y el puntaje.'); return; }
+  private recargarTareas() { this.api.tareas(this.ofertaId()).subscribe((l) => this.tareas.set(l)); }
+
+  alternarFormTarea() {
+    if (this.mostrarFormTarea()) { this.cerrarFormTarea(); return; }
+    this.editandoTareaId.set(null);
+    this.formTarea = tareaVacia();
+    this.mostrarFormTarea.set(true);
+  }
+
+  editarTarea(t: Tarea) {
+    this.editandoTareaId.set(t.id);
+    this.formTarea = { titulo: t.titulo, descripcion: t.descripcion, fechaLimite: t.fechaLimite };
+    this.mostrarFormTarea.set(true);
+  }
+
+  guardarTarea(f: NgForm) {
+    if (f.invalid) { f.control.markAllAsTouched(); this.flash.err('Completa el título y la fecha límite.'); return; }
+    const id = this.editandoTareaId();
     this.guardandoTarea.set(true);
-    this.api.crearTarea(this.ofertaId(), this.formTarea).subscribe({
+    const req = id !== null ? this.api.actualizarTarea(id, this.formTarea) : this.api.crearTarea(this.ofertaId(), this.formTarea);
+    req.subscribe({
       next: (t) => {
         this.guardandoTarea.set(false);
-        this.flash.ok(`Tarea "${t.titulo}" creada.`);
+        this.flash.ok(id !== null ? `Tarea "${t.titulo}" actualizada.` : `Tarea "${t.titulo}" creada.`);
         this.cancelarTarea(f);
-        this.api.tareas(this.ofertaId()).subscribe((l) => this.tareas.set(l));
+        this.recargarTareas();
       },
-      error: (e) => { this.guardandoTarea.set(false); this.flash.err(errMsg(e, 'No se pudo crear la tarea.')); },
+      error: (e) => { this.guardandoTarea.set(false); this.flash.err(errMsg(e, 'No se pudo guardar la tarea.')); },
+    });
+  }
+
+  eliminarTarea(t: Tarea) {
+    if (!confirm(`¿Eliminar la tarea "${t.titulo}"? Esta acción no se puede deshacer.`)) return;
+    this.api.eliminarTarea(t.id).subscribe({
+      next: () => {
+        this.flash.ok(`Tarea "${t.titulo}" eliminada.`);
+        if (this.editandoTareaId() === t.id) this.cerrarFormTarea();
+        this.recargarTareas();
+      },
+      error: (e) => this.flash.err(errMsg(e, 'No se pudo eliminar la tarea.')),
     });
   }
 
   cancelarTarea(f: NgForm) {
     f.resetForm();
-    this.formTarea = { titulo: '', descripcion: '', fechaLimite: '', puntajeMax: 20 };
+    this.cerrarFormTarea();
+  }
+
+  private cerrarFormTarea() {
+    this.formTarea = tareaVacia();
+    this.editandoTareaId.set(null);
     this.mostrarFormTarea.set(false);
   }
 }

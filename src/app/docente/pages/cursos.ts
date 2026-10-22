@@ -10,7 +10,7 @@ import { errMsg } from '../../core/util';
   imports: [RouterLink],
   template: `
     <div class="page-head">
-      <div><h1>Mis cursos</h1><p>Cursos que el administrador te asignó. Ábrelos para ver alumnos, calificar, tomar asistencia y gestionar tareas.</p></div>
+      <div><h1>Mis cursos</h1><p>Cursos que el administrador te asignó. Ábrelos para gestionar sus sesiones y tareas.</p></div>
     </div>
 
     @if (error()) { <div class="alert alert-err">{{ error() }}</div> }
@@ -22,7 +22,6 @@ import { errMsg } from '../../core/util';
           <div class="card">
             <div class="card-top"><h3>{{ c.cursoNombre }}</h3><span class="badge b-info">{{ c.periodoNombre }}</span></div>
             <p class="card-meta">{{ c.cursoCodigo }}</p>
-            <p class="card-meta">{{ c.totalAlumnos }} alumnos matriculados</p>
             <p class="card-meta">{{ c.totalSesiones }} sesiones · {{ c.totalTareas }} tareas</p>
             <div class="card-actions"><a class="btn btn-dark btn-sm" [routerLink]="[c.id]">Abrir curso</a></div>
           </div>

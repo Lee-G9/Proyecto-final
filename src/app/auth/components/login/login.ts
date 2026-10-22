@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, normalizarRol, rutaPorRol } from '../../services/auth';
 import { LoginRequest } from '../../models/login-request';
-import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -21,14 +20,6 @@ export class LoginComponent {
 
   loading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
-  modoDemo = environment.useMock;
-  cuentasDemo = [
-    { rol: 'Administrador', username: 'admin' },
-    { rol: 'Docente', username: 'carlos' },
-    { rol: 'Docente', username: 'vincent' },
-    { rol: 'Alumno', username: 'pablo' },
-    { rol: 'Alumno', username: 'rodrigo' },
-  ];
 
   constructor(
     private authService: AuthService,
@@ -39,11 +30,6 @@ export class LoginComponent {
       const destino = rutaPorRol(this.authService.getRol());
       if (destino !== '/login') this.router.navigate([destino]);
     }
-  }
-
-  usarDemo(username: string): void {
-    this.credentials = { username, password: '123456' };
-    this.errorMessage.set(null);
   }
 
   onSubmit(): void {
@@ -67,7 +53,8 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
-        if (err.status === 401) {
+        // servicio-usuarios responde 403 (no 401) cuando las credenciales son incorrectas.
+        if (err.status === 401 || err.status === 403) {
           this.errorMessage.set('Credenciales incorrectas. Verifica tu usuario o clave.');
         } else if (err.status === 0) {
           this.errorMessage.set('No se pudo conectar con el servidor. Verifica que el backend esté en ejecución.');

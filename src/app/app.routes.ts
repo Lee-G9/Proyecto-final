@@ -19,11 +19,12 @@ export const routes: Routes = [
       { path: 'inicio', loadComponent: () => import('./admin/pages/inicio').then((m) => m.AdminInicio) },
       { path: 'docentes', data: { rol: 'DOCENTE' }, loadComponent: () => import('./admin/pages/usuarios').then((m) => m.AdminUsuarios) },
       { path: 'alumnos', data: { rol: 'ALUMNO' }, loadComponent: () => import('./admin/pages/usuarios').then((m) => m.AdminUsuarios) },
+      { path: 'administradores', data: { rol: 'ADMIN' }, loadComponent: () => import('./admin/pages/usuarios').then((m) => m.AdminUsuarios) },
       { path: 'periodos', loadComponent: () => import('./admin/pages/periodos').then((m) => m.AdminPeriodos) },
       { path: 'cursos', loadComponent: () => import('./admin/pages/cursos').then((m) => m.AdminCursos) },
       { path: 'oferta', loadComponent: () => import('./admin/pages/oferta').then((m) => m.AdminOferta) },
       { path: 'sesiones', loadComponent: () => import('./admin/pages/sesiones').then((m) => m.AdminSesiones) },
-      { path: 'matriculas', loadComponent: () => import('./admin/pages/matriculas').then((m) => m.AdminMatriculas) },
+      { path: 'tareas', loadComponent: () => import('./admin/pages/tareas').then((m) => m.AdminTareas) },
     ],
   },
 
@@ -37,7 +38,6 @@ export const routes: Routes = [
       { path: 'inicio', loadComponent: () => import('./docente/pages/inicio').then((m) => m.DocenteInicio) },
       { path: 'cursos', loadComponent: () => import('./docente/pages/cursos').then((m) => m.DocenteCursos) },
       { path: 'cursos/:id', loadComponent: () => import('./docente/pages/curso-detalle').then((m) => m.DocenteCursoDetalle) },
-      { path: 'cursos/:id/tareas/:tareaId', loadComponent: () => import('./docente/pages/entregas').then((m) => m.DocenteEntregas) },
     ],
   },
 
@@ -49,9 +49,6 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'inicio' },
       { path: 'inicio', loadComponent: () => import('./alumno/pages/inicio').then((m) => m.AlumnoInicio) },
-      { path: 'cursos', loadComponent: () => import('./alumno/pages/cursos').then((m) => m.AlumnoCursos) },
-      { path: 'tareas', loadComponent: () => import('./alumno/pages/tareas').then((m) => m.AlumnoTareas) },
-      { path: 'calificaciones', loadComponent: () => import('./alumno/pages/calificaciones').then((m) => m.AlumnoCalificaciones) },
     ],
   },
 

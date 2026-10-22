@@ -21,7 +21,7 @@
           required
           autocomplete="username"
           [disabled]="loading()"
-        />K
+        />
       </div>
 
       <div class="grupo-formulario">
@@ -44,14 +44,5 @@
       </button>
     </form>
 
-    <div *ngIf="modoDemo" class="demo-box">
-      <strong>Modo demostración (sin backend)</strong>
-      <p>Toca una cuenta para completar el usuario. La contraseña de todas es <code>123456</code>.</p>
-      <div class="demo-chips">
-        <button type="button" *ngFor="let c of cuentasDemo" (click)="usarDemo(c.username)">
-          {{ c.username }} <small>{{ c.rol }}</small>
-        </button>
-      </div>
-    </div>
   </div>
 </div>

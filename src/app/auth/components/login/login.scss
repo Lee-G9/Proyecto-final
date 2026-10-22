@@ -134,35 +134,3 @@
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
 }
-// Cuentas de demostración (solo visible con environment.useMock = true)
-.demo-box {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border: 1px dashed #cbd5e0;
-  border-radius: 10px;
-  background: #f8fafc;
-  font-size: 0.8rem;
-  color: #4a5568;
-
-  strong { display: block; margin-bottom: 0.25rem; color: #2d3748; }
-  p { margin: 0 0 0.6rem; }
-  code { background: #edf2f7; padding: 1px 5px; border-radius: 4px; }
-
-  .demo-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-
-    button {
-      border: 1px solid #cbd5e0;
-      background: #fff;
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      color: #2d3748;
-      &:hover { background: #ebf4ff; border-color: #3182ce; }
-      small { color: #718096; margin-left: 2px; }
-    }
-  }
-}
