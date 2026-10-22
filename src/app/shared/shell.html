@@ -1,0 +1,41 @@
+<div class="app-layout">
+  <aside class="sidebar" [class.abierto]="menuAbierto()">
+    <div class="sidebar-brand">
+      <span class="badge-brand">{{ badge() }}</span>
+      <h2>{{ titulo() }}</h2>
+    </div>
+
+    <nav class="sidebar-nav" (click)="menuAbierto.set(false)">
+      @for (it of items(); track it.path; let i = $index) {
+        @if (mostrarSeccion(i)) {
+          <span class="nav-section-title">{{ it.section }}</span>
+        }
+        <a class="nav-item" [routerLink]="it.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: !!it.exact }">
+          {{ it.label }}
+        </a>
+      }
+    </nav>
+  </aside>
+  @if (menuAbierto()) {
+    <div class="backdrop" (click)="menuAbierto.set(false)"></div>
+  }
+
+  <main class="main-content">
+    <header class="top-navbar">
+      <button type="button" class="menu-btn" aria-label="Abrir menú" (click)="menuAbierto.set(!menuAbierto())">☰</button>
+      <div class="spacer"></div>
+      <div class="user-profile">
+        <span class="avatar">{{ iniciales() }}</span>
+        <div class="user-meta">
+          <strong>{{ nombre() }}</strong>
+          <small>{{ rolLabel() }}</small>
+        </div>
+        <button type="button" class="logout" (click)="salir()">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <div class="dashboard-scroll-area">
+      <router-outlet />
+    </div>
+  </main>
+</div>

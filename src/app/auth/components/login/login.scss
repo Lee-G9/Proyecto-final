@@ -1,0 +1,168 @@
+// Estilos modernos para el Login de Aula Nexa
+
+.contenedor-principal-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 1rem;
+}
+
+.tarjeta-login {
+  background: #ffffff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 420px;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.encabezado-login {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h2 {
+    color: #2d3748;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #718096;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+}
+
+// Alertas de error y éxito
+.alerta-error {
+  background-color: #fff5f5;
+  color: #e53e3e;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid #e53e3e;
+  animation: shake 0.4s ease-in-out;
+}
+
+.alerta-exito {
+  background-color: #f0fff4;
+  color: #38a169;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid #38a169;
+}
+
+.grupo-formulario {
+  margin-bottom: 1.25rem;
+
+  label {
+    display: block;
+    color: #4a5568;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    color: #2d3748;
+    transition: all 0.2s ease-in-out;
+    box-sizing: border-box; // Asegura que el padding no rompa el ancho
+
+    &:focus {
+      outline: none;
+      border-color: #3182ce;
+      background-color: #ffffff;
+      box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+    }
+
+    &:disabled {
+      background-color: #edf2f7;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.boton-enviar {
+  width: 100%;
+  background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+  color: #ffffff;
+  padding: 0.85rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin-top: 1rem;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+  }
+}
+
+// Animación sutil para errores
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+// Cuentas de demostración (solo visible con environment.useMock = true)
+.demo-box {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px dashed #cbd5e0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 0.8rem;
+  color: #4a5568;
+
+  strong { display: block; margin-bottom: 0.25rem; color: #2d3748; }
+  p { margin: 0 0 0.6rem; }
+  code { background: #edf2f7; padding: 1px 5px; border-radius: 4px; }
+
+  .demo-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+
+    button {
+      border: 1px solid #cbd5e0;
+      background: #fff;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: #2d3748;
+      &:hover { background: #ebf4ff; border-color: #3182ce; }
+      small { color: #718096; margin-left: 2px; }
+    }
+  }
+}

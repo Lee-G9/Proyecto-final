@@ -1,0 +1,57 @@
+<div class="contenedor-principal-login">
+  <div class="tarjeta-login">
+    <div class="encabezado-login">
+      <h2>INICIO DE SESION</h2>
+      <p>Proyecto de curso</p>
+    </div>
+
+    <div *ngIf="errorMessage()" class="alerta-error" role="alert">
+      {{ errorMessage() }}
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <div class="grupo-formulario">
+        <label for="username">Usuario o Correo</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          [(ngModel)]="credentials.username"
+          placeholder="Ej. admin, docente1, alumno1"
+          required
+          autocomplete="username"
+          [disabled]="loading()"
+        />K
+      </div>
+
+      <div class="grupo-formulario">
+        <label for="password">Contraseña</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          [(ngModel)]="credentials.password"
+          placeholder="••••••••"
+          required
+          autocomplete="current-password"
+          [disabled]="loading()"
+        />
+      </div>
+
+      <button type="submit" class="boton-enviar" [disabled]="loading()">
+        <span *ngIf="loading()">Ingresando...</span>
+        <span *ngIf="!loading()">Iniciar Sesión</span>
+      </button>
+    </form>
+
+    <div *ngIf="modoDemo" class="demo-box">
+      <strong>Modo demostración (sin backend)</strong>
+      <p>Toca una cuenta para completar el usuario. La contraseña de todas es <code>123456</code>.</p>
+      <div class="demo-chips">
+        <button type="button" *ngFor="let c of cuentasDemo" (click)="usarDemo(c.username)">
+          {{ c.username }} <small>{{ c.rol }}</small>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
