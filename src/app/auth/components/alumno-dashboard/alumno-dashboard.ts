@@ -10,8 +10,5 @@ import { NavItem, Shell } from '../../../shared/shell';
 export class AlumnoDashboard {
   items: NavItem[] = [
     { label: 'Inicio', path: 'inicio', section: 'Mi aprendizaje', exact: true },
-    { label: 'Mis cursos', path: 'cursos', section: 'Mi aprendizaje' },
-    { label: 'Tareas', path: 'tareas', section: 'Mi aprendizaje' },
-    { label: 'Calificaciones', path: 'calificaciones', section: 'Mi aprendizaje' },
   ];
 }

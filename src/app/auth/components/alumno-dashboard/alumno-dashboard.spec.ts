@@ -19,7 +19,7 @@ describe('AlumnoDashboard', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('muestra el menú del alumno', () => {
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.nav-item').length).toBe(4);
+  it('muestra solo Inicio, porque el backend aún no ofrece funciones de alumno', () => {
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.nav-item').length).toBe(1);
   });
 });

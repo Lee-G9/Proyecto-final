@@ -7,13 +7,15 @@ import { Oferta, Periodo, Sesion } from '../../core/models';
 import { errMsg } from '../../core/util';
 import { Flash } from '../../shared/flash';
 
+const vacio = () => ({ titulo: '', fecha: '', descripcion: '', numero: 1 });
+
 @Component({
   selector: 'app-admin-sesiones',
   standalone: true,
   imports: [FormsModule, DatePipe],
   template: `
     <div class="page-head">
-      <div><h1>Sesiones</h1><p>Crea las sesiones (clases) de cada curso dentro de su periodo. El docente registrará la asistencia en cada una.</p></div>
+      <div><h1>Sesiones</h1><p>Crea y administra las sesiones (clases) de cada curso dentro de su periodo.</p></div>
     </div>
 
     @if (flash.m(); as m) { <div class="alert" [class.alert-ok]="m.tipo === 'ok'" [class.alert-err]="m.tipo === 'err'" role="status">{{ m.texto }}</div> }
@@ -26,12 +28,17 @@ import { Flash } from '../../shared/flash';
           <select class="select" id="of" [ngModel]="ofertaId()" (ngModelChange)="cambiarOferta($event)">
             @for (o of ofertas(); track o.id) { <option [ngValue]="o.id">{{ o.periodoNombre }} · {{ o.cursoCodigo }} {{ o.cursoNombre }}</option> }
           </select></div>
-        <button type="button" class="btn btn-primary" (click)="mostrarForm.set(!mostrarForm())">{{ mostrarForm() ? 'Cerrar formulario' : '+ Crear sesión' }}</button>
+        <button type="button" class="btn btn-primary" (click)="alternarForm()">{{ mostrarForm() ? 'Cerrar formulario' : '+ Crear sesión' }}</button>
       </div>
 
       @if (mostrarForm()) {
         <form class="card form-card" #f="ngForm" (ngSubmit)="guardar(f)" novalidate>
+          <strong>{{ editandoId() !== null ? 'Editar sesión' : 'Nueva sesión' }}</strong>
           <div class="form-grid">
+            @if (editandoId() !== null) {
+              <div class="field"><label for="numero">N.º de sesión</label>
+                <input class="input" id="numero" name="numero" type="number" min="1" [(ngModel)]="form.numero" required /></div>
+            }
             <div class="field"><label for="titulo">Título</label>
               <input class="input" id="titulo" name="titulo" [(ngModel)]="form.titulo" required placeholder="Funciones cuadráticas" autocomplete="off" /></div>
             <div class="field"><label for="fecha">Fecha</label>
@@ -42,7 +49,8 @@ import { Flash } from '../../shared/flash';
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="cancelar(f)">Cancelar</button>
-            <button type="submit" class="btn btn-primary" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Crear sesión' }}</button>
+            <button type="submit" class="btn btn-primary" [disabled]="guardando()">
+              {{ guardando() ? 'Guardando…' : (editandoId() !== null ? 'Guardar cambios' : 'Crear sesión') }}</button>
           </div>
         </form>
       }
@@ -51,10 +59,16 @@ import { Flash } from '../../shared/flash';
       @else {
         <div class="tabla-wrap">
           <table class="tabla">
-            <thead><tr><th class="num">N.º</th><th>Título</th><th>Fecha</th><th>Descripción</th></tr></thead>
+            <thead><tr><th class="num">N.º</th><th>Título</th><th>Fecha</th><th>Descripción</th><th class="acciones">Acciones</th></tr></thead>
             <tbody>
               @for (s of sesiones(); track s.id) {
-                <tr><td class="num">{{ s.numero }}</td><td class="strong">{{ s.titulo }}</td><td>{{ s.fecha | date: 'dd/MM/yyyy' }}</td><td class="muted">{{ s.descripcion || '—' }}</td></tr>
+                <tr>
+                  <td class="num">{{ s.numero }}</td><td class="strong">{{ s.titulo }}</td><td>{{ s.fecha | date: 'dd/MM/yyyy' }}</td><td class="muted">{{ s.descripcion || '—' }}</td>
+                  <td class="acciones">
+                    <button type="button" class="btn btn-ghost btn-sm" (click)="editar(s)">Editar</button>
+                    <button type="button" class="btn btn-danger btn-sm" (click)="eliminar(s)">Eliminar</button>
+                  </td>
+                </tr>
               }
             </tbody>
           </table>
@@ -72,7 +86,8 @@ export class AdminSesiones implements OnInit {
   cargando = signal(true);
   guardando = signal(false);
   mostrarForm = signal(false);
-  form = { titulo: '', fecha: '', descripcion: '' };
+  editandoId = signal<number | null>(null);
+  form = vacio();
   flash = new Flash();
 
   periodo = computed(() => {
@@ -94,6 +109,7 @@ export class AdminSesiones implements OnInit {
 
   cambiarOferta(id: number) {
     this.ofertaId.set(id);
+    this.cerrar();
     this.cargarSesiones();
   }
 
@@ -106,20 +122,58 @@ export class AdminSesiones implements OnInit {
     });
   }
 
+  alternarForm() {
+    if (this.mostrarForm()) { this.cerrar(); return; }
+    this.editandoId.set(null);
+    this.form = vacio();
+    this.mostrarForm.set(true);
+  }
+
+  editar(s: Sesion) {
+    this.editandoId.set(s.id);
+    this.form = { titulo: s.titulo, fecha: s.fecha, descripcion: s.descripcion, numero: s.numero };
+    this.mostrarForm.set(true);
+  }
+
   guardar(f: NgForm) {
     const ofertaId = this.ofertaId();
     if (ofertaId == null) return;
     if (f.invalid) { f.control.markAllAsTouched(); this.flash.err('Completa el título y la fecha.'); return; }
+    const id = this.editandoId();
+    const { numero, ...datos } = this.form;
+    if (id !== null && this.sesiones().some((s) => s.id !== id && s.numero === numero)) {
+      this.flash.err(`Ya hay otra sesión con el número ${numero} en este curso.`);
+      return;
+    }
     this.guardando.set(true);
-    this.api.crearSesion({ ofertaId, ...this.form }).subscribe({
-      next: (s) => { this.guardando.set(false); this.flash.ok(`Sesión ${s.numero} creada.`); this.cancelar(f); this.cargarSesiones(); },
-      error: (e) => { this.guardando.set(false); this.flash.err(errMsg(e, 'No se pudo crear la sesión.')); },
+    const req = id !== null ? this.api.actualizarSesion(id, { ...datos, numero }) : this.api.crearSesion({ ofertaId, ...datos });
+    req.subscribe({
+      next: (s) => {
+        this.guardando.set(false);
+        this.flash.ok(id !== null ? `Sesión ${s.numero} actualizada.` : `Sesión ${s.numero} creada.`);
+        this.cancelar(f);
+        this.cargarSesiones();
+      },
+      error: (e) => { this.guardando.set(false); this.flash.err(errMsg(e, 'No se pudo guardar la sesión.')); },
+    });
+  }
+
+  eliminar(s: Sesion) {
+    if (!confirm(`¿Eliminar la sesión ${s.numero}: ${s.titulo}? Esta acción no se puede deshacer.`)) return;
+    this.api.eliminarSesion(s.id).subscribe({
+      next: () => { this.flash.ok(`Sesión ${s.numero} eliminada.`); if (this.editandoId() === s.id) this.cerrar(); this.cargarSesiones(); },
+      error: (e) => this.flash.err(errMsg(e, 'No se pudo eliminar la sesión.')),
     });
   }
 
   cancelar(f: NgForm) {
     f.resetForm();
-    this.form = { titulo: '', fecha: '', descripcion: '' };
+    this.cerrar();
+  }
+
+  private cerrar() {
+    this.form = vacio();
+    this.editandoId.set(null);
     this.mostrarForm.set(false);
   }
 }
