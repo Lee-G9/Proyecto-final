@@ -18,5 +18,7 @@ export class AdminDashboard {
     { label: 'Cursos por periodo', path: 'oferta', section: 'Asignaciones' },
     { label: 'Sesiones', path: 'sesiones', section: 'Asignaciones' },
     { label: 'Tareas', path: 'tareas', section: 'Asignaciones' },
+    { label: 'Matrículas', path: 'matriculas', section: 'Seguimiento' },
+
   ];
 }

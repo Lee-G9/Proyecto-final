@@ -2,9 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AsignacionApi, SesionApi, TareaApi } from '../../core/api-models';
-import { ofertaDesdeApi } from '../../core/mappers';
-import { Oferta, Sesion, Tarea } from '../../core/models';
+import { AsignacionApi, SesionApi, TareaApi, UsuarioApi } from '../../core/api-models';
+import { ofertaDesdeApi, usuarioDesdeApi } from '../../core/mappers';
+import { Oferta, Sesion, Tarea, Usuario } from '../../core/models';
 import { AcademicoService } from './academico.service';
 import { AuthService } from './auth';
 
@@ -14,6 +14,7 @@ export class DocentesService {
   private auth = inject(AuthService);
   private academico = inject(AcademicoService);
   private base = environment.academicoUrl;
+  private usuariosBase = environment.usuariosUrl;
 
   /** Cursos (asignaciones) del docente autenticado, con sus conteos de sesiones y tareas. */
   getCursosDocente(): Observable<Oferta[]> {
@@ -56,4 +57,12 @@ export class DocentesService {
     return this.academico.actualizarTarea(id, t);
   }
   eliminarTarea(id: number): Observable<void> { return this.academico.eliminarTarea(id); }
+
+  obtenerAlumno(idAlumno: number): Observable<Usuario> {
+    return this.http
+      .get<UsuarioApi>(
+        `${this.usuariosBase}/usuarios/alumnos/${idAlumno}`
+      )
+      .pipe(map(usuarioDesdeApi));
+  }
 }

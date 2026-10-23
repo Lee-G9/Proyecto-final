@@ -58,3 +58,49 @@ export interface TareaApi {
   fechaEntrega: string | null;
   activo: boolean;
 }
+
+export interface MatriculaApi {
+  idMatricula: number;
+  idAlumno: number;
+  idAsignacion: number;
+  fechaMatricula: string;
+  activo: boolean;
+}
+
+export interface CalificacionApi {
+  idCalificacion: number;
+  matricula: MatriculaApi;
+  idTarea: number;
+  nota: number;
+  fechaRegistro: string;
+  activo: boolean;
+}
+
+export interface TareaAlumnoApi {
+  idTarea: number;
+  titulo: string;
+  descripcion: string;
+  fechaPublicacion: string;
+  fechaEntrega: string;
+  idCalificacion: number | null;
+  nota: number | null;
+  fechaRegistro: string | null;
+}
+
+export interface CursoAlumnoApi {
+  idMatricula: number;
+  idAsignacion: number;
+  fechaMatricula: string;
+
+  idCurso: number;
+  codigoCurso: string;
+  nombreCurso: string;
+  descripcionCurso: string;
+
+  idPeriodo: number;
+  periodo: string;
+  fechaInicioPeriodo: string;
+  fechaFinPeriodo: string;
+
+  tareas: TareaAlumnoApi[];
+}

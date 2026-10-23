@@ -75,3 +75,49 @@ export interface Tarea {
   descripcion: string;
   fechaLimite: string; // yyyy-MM-ddTHH:mm
 }
+
+export interface Matricula {
+  id: number;
+  alumnoId: number;
+  ofertaId: number;
+  fechaMatricula: string;
+  activo: boolean;
+}
+
+export interface Calificacion {
+  id: number;
+  matriculaId: number;
+  tareaId: number;
+  nota: number;
+  fechaRegistro: string;
+  activo: boolean;
+}
+
+export interface TareaAlumno {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  fechaPublicacion: string;
+  fechaEntrega: string;
+  calificacionId: number | null;
+  nota: number | null;
+  fechaRegistro: string | null;
+}
+
+export interface CursoAlumno {
+  matriculaId: number;
+  ofertaId: number;
+  fechaMatricula: string;
+
+  cursoId: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+
+  periodoId: number;
+  periodo: string;
+  fechaInicioPeriodo: string;
+  fechaFinPeriodo: string;
+
+  tareas: TareaAlumno[];
+}

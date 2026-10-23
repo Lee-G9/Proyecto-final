@@ -25,6 +25,7 @@ export const routes: Routes = [
       { path: 'oferta', loadComponent: () => import('./admin/pages/oferta').then((m) => m.AdminOferta) },
       { path: 'sesiones', loadComponent: () => import('./admin/pages/sesiones').then((m) => m.AdminSesiones) },
       { path: 'tareas', loadComponent: () => import('./admin/pages/tareas').then((m) => m.AdminTareas) },
+      { path: 'matriculas', loadComponent: ()=> import('./admin/pages/matriculas').then((m)=>m.AdminMatriculas)},
     ],
   },
 

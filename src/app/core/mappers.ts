@@ -1,6 +1,7 @@
 import { normalizarRol } from '../auth/services/auth';
-import { AsignacionApi, CursoApi, PeriodoApi, SesionApi, TareaApi, UsuarioApi } from './api-models';
-import { Curso, Oferta, Periodo, Sesion, Tarea, Usuario } from './models';
+import { AsignacionApi,CalificacionApi , CursoApi, MatriculaApi , PeriodoApi, SesionApi, TareaApi, UsuarioApi, CursoAlumnoApi, TareaAlumnoApi } from './api-models';
+import { Calificacion,Curso, Matricula, Oferta, Periodo, Sesion, Tarea, Usuario, CursoAlumno, TareaAlumno} from './models';
+
 
 export function usuarioDesdeApi(u: UsuarioApi): Usuario {
   const rol = (u.roles ?? []).map((r) => normalizarRol(r.nombre)).find((r) => r !== null) ?? 'ALUMNO';
@@ -67,5 +68,65 @@ export function tareaDesdeApi(t: TareaApi): Tarea {
     titulo: t.titulo,
     descripcion: t.descripcion ?? '',
     fechaLimite: (t.fechaEntrega ?? '').slice(0, 16),
+  };
+}
+
+export function matriculaDesdeApi(m: MatriculaApi): Matricula {
+  return {
+    id: m.idMatricula,
+    alumnoId: m.idAlumno,
+    ofertaId: m.idAsignacion,
+    fechaMatricula: m.fechaMatricula,
+    activo: m.activo,
+  };
+}
+
+export function calificacionDesdeApi(c: CalificacionApi): Calificacion {
+  return {
+    id: c.idCalificacion,
+    matriculaId: c.matricula.idMatricula,
+    tareaId: c.idTarea,
+    nota: c.nota,
+    fechaRegistro: c.fechaRegistro,
+    activo: c.activo,
+  };
+
+
+}
+
+export function tareaAlumnoDesdeApi(
+  tarea: TareaAlumnoApi
+): TareaAlumno {
+  return {
+    id: tarea.idTarea,
+    titulo: tarea.titulo,
+    descripcion: tarea.descripcion,
+    fechaPublicacion: tarea.fechaPublicacion,
+    fechaEntrega: tarea.fechaEntrega,
+    calificacionId: tarea.idCalificacion,
+    nota: tarea.nota,
+    fechaRegistro: tarea.fechaRegistro,
+  };
+}
+
+export function cursoAlumnoDesdeApi(
+  curso: CursoAlumnoApi
+): CursoAlumno {
+  return {
+    matriculaId: curso.idMatricula,
+    ofertaId: curso.idAsignacion,
+    fechaMatricula: curso.fechaMatricula,
+
+    cursoId: curso.idCurso,
+    codigo: curso.codigoCurso,
+    nombre: curso.nombreCurso,
+    descripcion: curso.descripcionCurso,
+
+    periodoId: curso.idPeriodo,
+    periodo: curso.periodo,
+    fechaInicioPeriodo: curso.fechaInicioPeriodo,
+    fechaFinPeriodo: curso.fechaFinPeriodo,
+
+    tareas: curso.tareas.map(tareaAlumnoDesdeApi),
   };
 }

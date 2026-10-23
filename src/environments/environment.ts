@@ -6,4 +6,6 @@ export const environment = {
   usuariosUrl: gateway,
   /** Base de servicio-academico (cursos, periodos, asignaciones, sesiones, tareas), vía gateway. */
   academicoUrl: gateway,
+  /** Base de servicio-seguimiento (matrículas y calificaciones), vía gateway. */
+  seguimientoUrl: gateway,
 };
